@@ -33,9 +33,10 @@ struct ActionButtons: View {
                 .cornerRadius(10)
                 .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
         }
+        .disabled(!hack.estaIniciado)
         .padding(.horizontal)
     }
-    
+
     private var closeAndStartButtons: some View {
         HStack(spacing: 15) {
             Button(action: showCloseAlert) {
@@ -49,6 +50,7 @@ struct ActionButtons: View {
                     .shadow(color: Color.red.opacity(0.3), radius: 2, x: 0, y: 2)
             }
             .disabled(!hack.estaActivo)
+            .disabled(!hack.estaIniciado)
             
             Button(action: startHack) {
                 Text("Iniciar Hack")

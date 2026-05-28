@@ -63,9 +63,9 @@ class HacksViewModel: ObservableObject {
             "maxScore": valorRubro
         ], forDocument: hackRef)
 
-        for team in teams {
+        for (index, team) in teams.enumerated() {
             let teamRef = hackRef.collection("teams").document()
-            batch.setData(["name": team], forDocument: teamRef)
+            batch.setData(["name": team, "order": index], forDocument: teamRef)
         }
 
         for judge in judges {
@@ -162,9 +162,10 @@ class HacksViewModel: ObservableObject {
             if let error = error { completion(.failure(error)); return }
             let teams = (snapshot?.documents ?? []).compactMap { doc -> Equipo? in
                 guard let name = doc.data()["name"] as? String else { return nil }
-                return Equipo(firestoreId: doc.documentID, nombre: name)
+                let order = doc.data()["order"] as? Int ?? 0
+                return Equipo(firestoreId: doc.documentID, nombre: name, order: order)
             }
-            completion(.success(teams))
+            completion(.success(teams.sorted { $0.order < $1.order }))
         }
     }
 
@@ -256,6 +257,43 @@ class HacksViewModel: ObservableObject {
                 if let error = error { completion(.failure(error)); return }
                 let notes = snapshot?.data()?["notes"] as? String ?? ""
                 completion(.success(notes))
+            }
+    }
+
+    func getAllNotes(hackId: String, completion: @escaping (Result<[String: [(judgeName: String, notes: String)]], Error>) -> Void) {
+        getTeams(hackId: hackId) { teamResult in
+            switch teamResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let teams):
+                self.collectAllNotes(hackId: hackId, teams: teams, completion: completion)
+            }
+        }
+    }
+
+    private func collectAllNotes(
+        hackId: String, teams: [Equipo],
+        index: Int = 0, result: [String: [(judgeName: String, notes: String)]] = [:],
+        completion: @escaping (Result<[String: [(judgeName: String, notes: String)]], Error>) -> Void
+    ) {
+        guard index < teams.count else { completion(.success(result)); return }
+        let team = teams[index]
+        db.collection("hackathons").document(hackId)
+            .collection("teams").document(team.firestoreId)
+            .collection("evaluations").getDocuments { snapshot, error in
+                var updated = result
+                var teamNotes: [(judgeName: String, notes: String)] = []
+                for doc in snapshot?.documents ?? [] {
+                    let data = doc.data()
+                    let judgeName = data["judgeName"] as? String ?? "Unknown"
+                    let notes = data["notes"] as? String ?? ""
+                    if !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        teamNotes.append((judgeName: judgeName, notes: notes))
+                    }
+                }
+                if !teamNotes.isEmpty {
+                    updated[team.nombre] = teamNotes
+                }
+                self.collectAllNotes(hackId: hackId, teams: teams, index: index + 1, result: updated, completion: completion)
             }
     }
 

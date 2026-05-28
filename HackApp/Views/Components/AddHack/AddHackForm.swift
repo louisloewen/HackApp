@@ -1,23 +1,10 @@
 
 import SwiftUI
-/// Vista que permite agregar un nuevo hackathon mediante un formulario dividido en varios pasos.
-///
-/// Este formulario está dividido en varias secciones que incluyen la información básica del hackathon, las fechas, la rúbrica, los equipos, los jueces y una revisión final antes de guardar. Se utilizan varios popovers para agregar rubros, equipos y jueces, y validaciones detalladas aseguran que todos los datos sean correctos antes de guardar el hackathon.
-///
-/// - Parameters:
-///   - formData: Un `ObservedObject` que contiene los datos del formulario, como el nombre, la clave, la descripción, etc.
-///   - listaHacks: Un `ObservedObject` que gestiona la lista de hackathons.
-///   - showingAlert: Un `Binding` que controla si se debe mostrar una alerta.
-///   - listaRubros: Un `ObservedObject` que gestiona la lista de rubros para calificar el hackathon.
-///   - listaEquipos: Un `ObservedObject` que gestiona la lista de equipos del hackathon.
-///   - listaJueces: Un `ObservedObject` que gestiona la lista de jueces del hackathon.
+
 struct AddHackForm: View {
     @ObservedObject var formData: FormDataViewModel
     @ObservedObject var listaHacks: HacksViewModel
     @Binding var showingAlert: Bool
-    @State private var currentStep: Int = 0
-    @State private var steps: [String] = ["Información Básica", "Fechas", "Rúbrica", "Equipos", "Jueces", "Revisión"]
-    private let totalSteps = 6
     @State private var alertMessage: String = ""
     @State private var showingAddRubroPopover = false
     @State private var showingAddEquipoPopover = false
@@ -31,274 +18,240 @@ struct AddHackForm: View {
     @State private var equipoAEditar: Equipo?
     @ObservedObject var listaRubros = RubroViewModel()
     @ObservedObject var listaEquipos = EquipoViewModel()
-    @ObservedObject  var listaJueces = JuezViewModel()
-    
+    @ObservedObject var listaJueces = JuezViewModel()
+
+    @State private var showBasicInfo = true
+    @State private var showDates = false
+    @State private var showRubros = false
+    @State private var showEquipos = false
+    @State private var showJueces = false
 
     @Environment(\.presentationMode) var presentationMode
+
     var body: some View {
         VStack {
-            ProgressBar(progress: CGFloat(currentStep) / CGFloat(totalSteps))
+            ScrollView {
+                VStack(spacing: 16) {
+                    collapsibleSection(title: "Información Básica", isExpanded: $showBasicInfo) {
+                        basicInfoContent
+                    }
+                    collapsibleSection(title: "Fechas", isExpanded: $showDates) {
+                        dateContent
+                    }
+                    collapsibleSection(title: "Rúbrica", isExpanded: $showRubros) {
+                        rubrosContent
+                    }
+                    collapsibleSection(title: "Equipos", isExpanded: $showEquipos) {
+                        equiposContent
+                    }
+                    collapsibleSection(title: "Jueces", isExpanded: $showJueces) {
+                        juecesContent
+                    }
+                }
                 .padding()
+            }
 
-            StepIndicator(currentStep: currentStep, totalSteps: totalSteps, steps: steps, onStepSelected: { step in
-                currentStep = step
-            })
-            
-            switch currentStep {
-            case 0: basicInfoForm
-            case 1: dateForm
-            case 2: rubrosForm
-            case 3: equiposForm
-            case 4: juecesForm
-            case 5: reviewForm
-            default: EmptyView()
+            Button(action: validateAndSave) {
+                Text("Guardar Hackathon")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
             }
-            
-            HStack {
-                if currentStep > 0 {
-                    Button("Anterior") {
-                        currentStep -= 1
-                    }
-                    .padding()
-                }
-                
-                Spacer()
-                
-                if currentStep < totalSteps - 1 {
-                    Button("Siguiente") {
-                        currentStep += 1
-                    }
-                    .padding()
-                } else {
-                    Button("Guardar") {
-                        validateAndSave()
-                    }
-                    .padding()
-                }
-            }
+            .padding()
         }
         .alert(isPresented: $showingAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
     }
 
-    var basicInfoForm: some View {
-        Form {
-            Section(header: Text("Nombre del Hackathon")) {
-                TextField("Nombre del hack", text: $formData.nombre)
+    private func collapsibleSection<Content: View>(
+        title: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
+                    .foregroundColor(.gray)
             }
-            Section(header: Text("Clave del Hackathon")) {
+            .padding()
+            .background(Color(.systemGray5))
+            .cornerRadius(12)
+            .onTapGesture { withAnimation { isExpanded.wrappedValue.toggle() } }
+
+            if isExpanded.wrappedValue {
+                content()
+                    .padding(.top, 8)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var basicInfoContent: some View {
+        VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Nombre del Hackathon").font(.subheadline).foregroundColor(.secondary)
+                TextField("Nombre del hack", text: $formData.nombre)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Clave del Hackathon").font(.subheadline).foregroundColor(.secondary)
                 TextField("Clave del hack", text: $formData.clave)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .autocorrectionDisabled(true)
             }
-            Section(header: Text("Descripción del Hackathon")) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Descripción del Hackathon").font(.subheadline).foregroundColor(.secondary)
                 TextField("Descripción del hack", text: $formData.descripcion)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
             }
         }
+        .padding(.horizontal)
     }
 
-    var dateForm: some View {
-        Form {
-            Section(header: Text("Fecha de inicio del Hackathon")) {
-                DatePicker("Selecciona la fecha inicio", selection: $formData.date)
-            }
-            Section(header: Text("Fecha de fin del Hackathon")) {
-                DatePicker("Selecciona la fecha fin", selection: $formData.dateEnd)
-            }
+    private var dateContent: some View {
+        VStack(spacing: 12) {
+            DatePicker("Fecha de inicio", selection: $formData.date, displayedComponents: .date)
+            DatePicker("Fecha de fin", selection: $formData.dateEnd, displayedComponents: .date)
         }
+        .padding(.horizontal)
     }
 
-    var rubrosForm: some View {
-        Form {
-            Section(header: Text("Duración del pitch (minutos)")) {
+    private var rubrosContent: some View {
+        VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Duración del pitch (minutos)").font(.subheadline).foregroundColor(.secondary)
                 TextField("Valor máximo de los rubros", text: $formData.tiempoPitch)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
             }
-            Section(header: Text("Valor de la calificación máxima")) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Valor de la calificación máxima").font(.subheadline).foregroundColor(.secondary)
                 TextField("Valor máximo de los rubros", text: $formData.valorRubro)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
             }
-            Section(header: Text("Rúbrica")) {
-                AddRubroButton(
-                    showingAddRubroPopover: $showingAddRubroPopover,
-                    listaRubros: listaRubros,
-                    rubroNombre: $rubroNombre,
-                    rubroValor: $rubroValor,
-                    showingAlert: $showingAlert, rubroAEditar: $rubroAEditar
-                )
-
-                ForEach(listaRubros.rubroList, id: \.id) { rubro in
-                    HStack {
-                        Text(rubro.nombre)
-                        Spacer()
-                        Text("\(rubro.valor, specifier: "%.0f")%")
-                        Menu {
-                            Button(action: {
-                                rubroAEditar = rubro
-                                rubroNombre = rubro.nombre
-                                rubroValor = "\(rubro.valor)"
-                                showingAddRubroPopover.toggle()
-                            }) {
-                                Label("Editar", systemImage: "pencil.circle.fill")
-                                    .foregroundColor(.yellow)
-                            }
-
-                            Button(action: {
-                                eliminarRubro(rubro)
-                            }) {
-                                Label("Eliminar", systemImage: "trash.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .foregroundColor(.blue)
-                                .imageScale(.large)
+            AddRubroButton(
+                showingAddRubroPopover: $showingAddRubroPopover,
+                listaRubros: listaRubros,
+                rubroNombre: $rubroNombre,
+                rubroValor: $rubroValor,
+                showingAlert: $showingAlert,
+                rubroAEditar: $rubroAEditar
+            )
+            ForEach(listaRubros.rubroList, id: \.id) { rubro in
+                HStack {
+                    Text(rubro.nombre)
+                    Spacer()
+                    Text("\(rubro.valor, specifier: "%.0f")%")
+                    Menu {
+                        Button(action: {
+                            rubroAEditar = rubro
+                            rubroNombre = rubro.nombre
+                            rubroValor = "\(rubro.valor)"
+                            showingAddRubroPopover.toggle()
+                        }) {
+                            Label("Editar", systemImage: "pencil.circle.fill")
+                                .foregroundColor(.yellow)
                         }
+                        Button(action: { eliminarRubro(rubro) }) {
+                            Label("Eliminar", systemImage: "trash.circle.fill")
+                                .foregroundColor(.red)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle.fill")
+                            .foregroundColor(.blue)
+                            .imageScale(.large)
                     }
                 }
             }
         }
+        .padding(.horizontal)
     }
 
-    var equiposForm: some View {
-        Form {
-            Section(header: Text("Equipos")) {
-                AddEquipoButton(
-                    showingAddEquipoPopover: $showingAddEquipoPopover,
-                    listaEquipos: listaEquipos,
-                    equipoNombre: $equipoNombre,
-                    showingAlert: $showingAlert,
-                    equipoAEditar: $equipoAEditar
-                )
-                ForEach(listaEquipos.equipoList, id: \.id) { equipo in
-                    HStack {
-                        Text(equipo.nombre)
-                        Spacer()
-                        Menu {
-                            Button(action: {
-                                equipoAEditar = equipo
-                                equipoNombre = equipo.nombre
-                                showingAddEquipoPopover.toggle()
-                            }) {
-                                Label("Editar", systemImage: "pencil.circle.fill")
-                                    .foregroundColor(.yellow)
-                            }
-
-                            Button(action: {
-                                eliminarEquipo(equipo)
-                            }) {
-                                Label("Eliminar", systemImage: "trash.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .foregroundColor(.blue)
-                                .imageScale(.large)
+    private var equiposContent: some View {
+        VStack(spacing: 12) {
+            AddEquipoButton(
+                showingAddEquipoPopover: $showingAddEquipoPopover,
+                listaEquipos: listaEquipos,
+                equipoNombre: $equipoNombre,
+                showingAlert: $showingAlert,
+                equipoAEditar: $equipoAEditar
+            )
+            ForEach(listaEquipos.equipoList, id: \.id) { equipo in
+                HStack {
+                    Text(equipo.nombre)
+                    Spacer()
+                    Menu {
+                        Button(action: {
+                            equipoAEditar = equipo
+                            equipoNombre = equipo.nombre
+                            showingAddEquipoPopover.toggle()
+                        }) {
+                            Label("Editar", systemImage: "pencil.circle.fill")
+                                .foregroundColor(.yellow)
                         }
+                        Button(action: { eliminarEquipo(equipo) }) {
+                            Label("Eliminar", systemImage: "trash.circle.fill")
+                                .foregroundColor(.red)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle.fill")
+                            .foregroundColor(.blue)
+                            .imageScale(.large)
                     }
                 }
             }
         }
+        .padding(.horizontal)
     }
 
-    
-    var juecesForm: some View {
-        Form {
-            Section(header: Text("Jueces")) {
-                AddJuezButton(
-                    showingAddJuezPopover: $showingAddJuezPopover,
-                    listaJueces: listaJueces,
-                    juezNombre: $juezNombre,
-                    showingAlert: $showingAlert,
-                    juezAEditar: $juezAEditar
-                )
-                ForEach(listaJueces.juezList, id: \.id) { juez in
-                    HStack {
-                        Text(juez.nombre)
-                        Spacer()
-                        Menu {
-                            Button(action: {
-                                juezAEditar = juez
-                                juezNombre = juez.nombre
-                                showingAddJuezPopover.toggle()
-                            }) {
-                                Label("Editar", systemImage: "pencil.circle.fill")
-                                    .foregroundColor(.yellow)
-                            }
-
-                            Button(action: {
-                                eliminarJuez(juez)
-                            }) {
-                                Label("Eliminar", systemImage: "trash.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .foregroundColor(.blue)
-                                .imageScale(.large)
+    private var juecesContent: some View {
+        VStack(spacing: 12) {
+            AddJuezButton(
+                showingAddJuezPopover: $showingAddJuezPopover,
+                listaJueces: listaJueces,
+                juezNombre: $juezNombre,
+                showingAlert: $showingAlert,
+                juezAEditar: $juezAEditar
+            )
+            ForEach(listaJueces.juezList, id: \.id) { juez in
+                HStack {
+                    Text(juez.nombre)
+                    Spacer()
+                    Menu {
+                        Button(action: {
+                            juezAEditar = juez
+                            juezNombre = juez.nombre
+                            showingAddJuezPopover.toggle()
+                        }) {
+                            Label("Editar", systemImage: "pencil.circle.fill")
+                                .foregroundColor(.yellow)
                         }
+                        Button(action: { eliminarJuez(juez) }) {
+                            Label("Eliminar", systemImage: "trash.circle.fill")
+                                .foregroundColor(.red)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle.fill")
+                            .foregroundColor(.blue)
+                            .imageScale(.large)
                     }
                 }
             }
         }
-    }
-    
-    var reviewForm: some View {
-        VStack {
-            Text("Revisa la información antes de guardar")
-                .font(.headline)
-                .padding()
-
-            Form {
-                Section(header: Text("Información Básica")) {
-                    Text("Nombre: \(formData.nombre)")
-                    Text("Clave: \(formData.clave)")
-                    Text("Descripción: \(formData.descripcion)")
-                }
-
-                Section(header: Text("Fechas")) {
-                    Text("Fecha de inicio: \(formData.date, style: .date)")
-                    Text("Fecha de fin: \(formData.dateEnd, style: .date)")
-                }
-
-                Section(header: Text("Rúbrica")) {
-                    Text("Tiempo Pitch: \(formData.tiempoPitch) minutos")
-                    Text("Calificación máxima: \(formData.valorRubro) ")
-                    
-                    ForEach(listaRubros.rubroList) { rubro in
-                        HStack {
-                            Text("\(rubro.nombre): \(rubro.valor, specifier: "%.0f")%")
-                            
-                            Spacer()
-                        }
-                    }
-                }
-                Section(header: Text("Equipos")) {
-                    ForEach(listaEquipos.equipoList) { equipo in
-                                       HStack {
-                                           Text(equipo.nombre)
-                                           Spacer()
-                                       }
-                                   }
-                               }
-                               Section(header: Text("Jueces")) {
-                                   ForEach(listaJueces.juezList) { juez in
-                                       HStack {
-                                           Text(juez.nombre)
-                                           
-                                           Spacer()
-                                           
-                                          
-                                       }
-                                   }
-                               }
-                
-            }
-        }
+        .padding(.horizontal)
     }
 
     func eliminarRubro(_ rubro: Rubro) {
-       listaRubros.eliminarRubro(rubro)
+        listaRubros.eliminarRubro(rubro)
     }
 
     func eliminarEquipo(_ equipo: Equipo) {
@@ -363,6 +316,7 @@ struct AddHackForm: View {
             showingAlert = true
             return
         }
+
         if listaRubros.rubroList.isEmpty {
             alertMessage = "Debe agregar al menos un rubro."
             showingAlert = true
@@ -381,6 +335,7 @@ struct AddHackForm: View {
             showingAlert = true
             return
         }
+
         if listaJueces.juezList.isEmpty {
             alertMessage = "Debe agregar al menos un juez."
             showingAlert = true
@@ -420,11 +375,9 @@ struct AddHackForm: View {
             }
         }
     }
-
 }
 
 private func isNumeric(_ str: String) -> Bool {
     let numericCharacterSet = CharacterSet(charactersIn: "0123456789.")
-    let invertedCharacterSet = numericCharacterSet.inverted
-    return str.rangeOfCharacter(from: invertedCharacterSet) == nil
+    return str.rangeOfCharacter(from: numericCharacterSet.inverted) == nil
 }

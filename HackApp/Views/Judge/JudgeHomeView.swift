@@ -65,8 +65,11 @@ struct JudgeHomeView: View {
                                 judgeId: judgeId,
                                 nombreJuez: selectedJudge,
                                 isActive: isActive
-                            )) { EmptyView() }.opacity(0)
+                            )) { EmptyView() }
+                                .opacity(0)
+                                .disabled(isEvaluated)
                         )
+                        .opacity(isEvaluated ? 0.6 : 1.0)
                     }
                     .listStyle(PlainListStyle())
                 }

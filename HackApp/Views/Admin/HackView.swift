@@ -85,25 +85,25 @@ struct HackView: View {
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             InfoField(title: "Clave:", text: $clave)
-                .onChange(of: clave) { _ in checkForChanges() }
+                .onChange(of: clave) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             InfoField(title: "Nombre:", text: $nombre)
-                .onChange(of: nombre) { _ in checkForChanges() }
+                .onChange(of: nombre) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             InfoField(title: "Descripción:", text: $descripcion)
-                .onChange(of: descripcion) { _ in checkForChanges() }
+                .onChange(of: descripcion) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             DateField(title: "Fecha Inicio:", date: $fechaStart)
-                .onChange(of: fechaStart) { _ in checkForChanges() }
+                .onChange(of: fechaStart) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             DateField(title: "Fecha Fin:", date: $fechaEnd)
-                .onChange(of: fechaEnd) { _ in checkForChanges() }
+                .onChange(of: fechaEnd) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             InfoFieldInt(title: "Valor Rubro:", value: $valorRubro)
-                .onChange(of: valorRubro) { _ in checkForChanges() }
+                .onChange(of: valorRubro) { checkForChanges() }
                 .disabled(hack.estaIniciado)
             InfoFieldDouble(title: "Tiempo Pitch:", value: $tiempoPitch)
-                .onChange(of: tiempoPitch) { _ in checkForChanges() }
+                .onChange(of: tiempoPitch) { checkForChanges() }
                 .disabled(hack.estaIniciado)
 
             if hasChanges && !hack.estaIniciado {

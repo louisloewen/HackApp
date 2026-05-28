@@ -11,6 +11,8 @@ struct ResultsView: View {
     @State private var topTeamsPorCriterio: [(team: String, score: Double)] = []
     @State private var isLoading: Bool = true
     @State private var selectedCriterio: String? = nil
+    @State private var teamNotes: [String: [(judgeName: String, notes: String)]] = [:]
+    @State private var showNotesForTeam: String? = nil
 
     var body: some View {
         VStack {
@@ -35,7 +37,7 @@ struct ResultsView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
-                .onChange(of: selectedCriterio) { _ in updateTopTeamsPorCriterio() }
+                .onChange(of: selectedCriterio) { updateTopTeamsPorCriterio() }
 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack {
@@ -47,7 +49,7 @@ struct ResultsView: View {
                                 )
                                 .foregroundStyle(by: .value("Equipo", equipo))
                                 .annotation(position: .top) {
-                                    Text(String(format: "%.1f", calificaciones[equipo]!))
+                                    Text(String(format: "%.2f", calificaciones[equipo]!))
                                         .font(.caption)
                                         .foregroundColor(.black)
                                         .padding(5)
@@ -69,7 +71,7 @@ struct ResultsView: View {
                                 )
                                 .foregroundStyle(by: .value("Equipo", team.team))
                                 .annotation(position: .top) {
-                                    Text(String(format: "%.1f", team.score))
+                                    Text(String(format: "%.2f", team.score))
                                         .font(.caption)
                                         .foregroundColor(.black)
                                         .padding(5)
@@ -98,24 +100,69 @@ struct ResultsView: View {
                 VStack(spacing: 10) {
                     ForEach(getRankedTeams(), id: \.team) { rankedGroup in
                         let equipo = teams.first(where: { $0.nombre == rankedGroup.team })
-                        NavigationLink(destination: Group {
-                            if let equipo = equipo {
-                                TeamView(hack: hack, equipo: equipo)
+                        VStack(spacing: 0) {
+                            NavigationLink(destination: Group {
+                                if let equipo = equipo {
+                                    TeamView(hack: hack, equipo: equipo)
+                                }
+                            }) {
+                                HStack {
+                                    Text(rankedGroup.team)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text("\(String(format: "%.2f", rankedGroup.score)) / \(String(format: "%.2f", Double(hack.valorRubro)))")
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.accentColor)
+                                }
+                                .padding()
+                                .background(getBackgroundColor(for: rankedGroup.team, rank: rankedGroup.rank))
+                                .cornerRadius(12)
+                                .shadow(color: Color.black.opacity(0.1), radius: 4)
                             }
-                        }) {
-                            HStack {
-                                Text(rankedGroup.team)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text("\(String(format: "%.2f", rankedGroup.score)) / \(String(format: "%.2f", Double(hack.valorRubro)))")
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.accentColor)
+
+                            if let notes = teamNotes[rankedGroup.team], !notes.isEmpty {
+                                Button(action: {
+                                    withAnimation {
+                                        showNotesForTeam = showNotesForTeam == rankedGroup.team ? nil : rankedGroup.team
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "text.bubble")
+                                        Text("Feedback de jueces (\(notes.count))")
+                                            .font(.caption)
+                                        Spacer()
+                                        Image(systemName: showNotesForTeam == rankedGroup.team ? "chevron.up" : "chevron.down")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 6)
+                                }
+
+                                if showNotesForTeam == rankedGroup.team {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(notes, id: \.judgeName) { note in
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(note.judgeName)
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundColor(.blue)
+                                                Text(note.notes)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            .padding(8)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(8)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 8)
+                                    .transition(.opacity)
+                                }
                             }
-                            .padding()
-                            .background(getBackgroundColor(for: rankedGroup.team, rank: rankedGroup.rank))
-                            .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.1), radius: 4)
                         }
                     }
                 }
@@ -150,6 +197,11 @@ struct ResultsView: View {
                     calificacionesPorCriterio = criterionScores
                     updateTopTeamsPorCriterio()
                 }
+            }
+        }
+        viewModel.getAllNotes(hackId: hack.id) { result in
+            if case .success(let notes) = result {
+                DispatchQueue.main.async { teamNotes = notes }
             }
         }
     }

@@ -123,10 +123,37 @@ struct GradeView: View {
                             .font(.headline)
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(String(format: "%.1f", scores[rubro.firestoreId] ?? 1.0))
-                            .font(.headline)
-                            .foregroundColor(.gray)
+
+                        HStack(spacing: 4) {
+                            TextField(
+                                "",
+                                text: Binding(
+                                    get: {
+                                        String(format: "%.2f", scores[rubro.firestoreId] ?? 1.0)
+                                    },
+                                    set: { newText in
+                                        if let parsed = Double(newText) {
+                                            scores[rubro.firestoreId] = min(max(parsed, 1), Double(hackMaxScore))
+                                        }
+                                    }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .font(.title3.monospacedDigit())
+                            .fontWeight(.semibold)
+                            .frame(width: 70)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(8)
+
+                            Text("/ \(hackMaxScore)")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
                     }
+
                     Slider(
                         value: Binding(
                             get: { scores[rubro.firestoreId] ?? 1.0 },
@@ -178,7 +205,7 @@ struct GradeView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(UIColor.systemGray5)))
                 .shadow(radius: 5)
-                .onChange(of: judgeNotes) { _ in saveNotes() }
+                .onChange(of: judgeNotes) { saveNotes() }
         }
         .padding(.horizontal)
     }
