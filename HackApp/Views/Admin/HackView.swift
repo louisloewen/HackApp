@@ -384,7 +384,7 @@ struct HackView: View {
                          dismissButton: .default(Text("Aceptar")))
         case .sameDateWarning:
             return Alert(
-                title: Text("⚠️ Aviso sobre fechas"),
+                title: Text("Aviso sobre fechas"),
                 message: Text("La fecha de inicio y la fecha de fin son el mismo día. ¿Deseas continuar de todos modos?"),
                 primaryButton: .default(Text("Continuar")) { proceedWithSaveChanges() },
                 secondaryButton: .cancel(Text("Cancelar"))
