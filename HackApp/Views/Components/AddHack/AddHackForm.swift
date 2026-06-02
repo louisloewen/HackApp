@@ -6,6 +6,7 @@ struct AddHackForm: View {
     @ObservedObject var listaHacks: HacksViewModel
     @Binding var showingAlert: Bool
     @State private var alertMessage: String = ""
+    @State private var showSameDateWarning = false
     @State private var showingAddRubroPopover = false
     @State private var showingAddEquipoPopover = false
     @State private var showingAddJuezPopover = false
@@ -64,6 +65,12 @@ struct AddHackForm: View {
         }
         .alert(isPresented: $showingAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+        }
+        .alert("⚠️ Aviso sobre fechas", isPresented: $showSameDateWarning) {
+            Button("Continuar de todos modos") { proceedWithSave() }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("La fecha de inicio y la fecha de fin son el mismo día. ¿Deseas continuar de todos modos?")
         }
     }
 
@@ -282,8 +289,7 @@ struct AddHackForm: View {
         }
 
         if Calendar.current.isDate(formData.date, inSameDayAs: formData.dateEnd) {
-            alertMessage = "⚠️ La fecha de inicio y la fecha de fin son el mismo día. Por favor, verifica las fechas."
-            showingAlert = true
+            showSameDateWarning = true
             return
         }
 
@@ -348,6 +354,10 @@ struct AddHackForm: View {
             return
         }
 
+        proceedWithSave()
+    }
+
+    private func proceedWithSave() {
         listaHacks.checkIfKeyExists(formData.clave) { exists in
             if exists {
                 DispatchQueue.main.async {

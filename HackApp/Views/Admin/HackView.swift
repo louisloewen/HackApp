@@ -1,12 +1,13 @@
 import SwiftUI
 
 enum AlertType: Identifiable {
-    case closeHack, invalidDate, editHack, errorProcess, closeSucess, startSucess, confirmNoShow(equipo: Equipo), passwordError
+    case closeHack, invalidDate, sameDateWarning, editHack, errorProcess, closeSucess, startSucess, confirmNoShow(equipo: Equipo), passwordError
 
     var id: Int {
         switch self {
         case .closeHack: return 1
         case .invalidDate: return 2
+        case .sameDateWarning: return 9
         case .editHack: return 3
         case .errorProcess: return 4
         case .closeSucess: return 5
@@ -294,10 +295,18 @@ struct HackView: View {
     }
 
     private func saveChanges() {
-        if fechaStart >= fechaEnd || Calendar.current.isDate(fechaStart, inSameDayAs: fechaEnd) {
+        if fechaStart >= fechaEnd {
             alertType = .invalidDate
             return
         }
+        if Calendar.current.isDate(fechaStart, inSameDayAs: fechaEnd) {
+            alertType = .sameDateWarning
+            return
+        }
+        proceedWithSaveChanges()
+    }
+
+    private func proceedWithSaveChanges() {
         viewModel2.checkIfKeyExists(clave) { exists in
             if exists && clave != hack.clave {
                 alertType = .passwordError
@@ -371,8 +380,15 @@ struct HackView: View {
             )
         case .invalidDate:
             return Alert(title: Text("Fecha Invalida"),
-                         message: Text("La fecha de inicio no puede ser igual o posterior a la fecha de fin. Verifica que las fechas sean diferentes."),
+                         message: Text("La fecha de inicio no puede ser posterior a la fecha de fin."),
                          dismissButton: .default(Text("Aceptar")))
+        case .sameDateWarning:
+            return Alert(
+                title: Text("⚠️ Aviso sobre fechas"),
+                message: Text("La fecha de inicio y la fecha de fin son el mismo día. ¿Deseas continuar de todos modos?"),
+                primaryButton: .default(Text("Continuar")) { proceedWithSaveChanges() },
+                secondaryButton: .cancel(Text("Cancelar"))
+            )
         case .editHack:
             return Alert(title: Text("Se ha editado"),
                          message: Text("Los datos del Hack se han actualizado con éxito"),

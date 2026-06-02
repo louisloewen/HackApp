@@ -35,17 +35,25 @@ struct JudgesView: View {
                         .font(.title)
                         .padding()
 
-                    List(availableJudges.sorted(by: { $0.nombre < $1.nombre }), id: \.firestoreId) { judge in
-                        Button(action: { selectedJudge = judge }) {
-                            Text(judge.nombre)
-                                .font(.title2)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(selectedJudge?.firestoreId == judge.firestoreId
-                                    ? Color.blue.opacity(0.2) : Color.clear)
-                                .cornerRadius(8)
+                    ScrollView {
+                        VStack(spacing: 4) {
+                            ForEach(availableJudges.sorted(by: { $0.nombre < $1.nombre }), id: \.firestoreId) { judge in
+                                Button(action: { selectedJudge = judge }) {
+                                    Text(judge.nombre)
+                                        .font(.title2)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(selectedJudge?.firestoreId == judge.firestoreId
+                                            ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal)
+                            }
                         }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxHeight: 400)
 
                     NavigationLink(destination: Group {
                         if let judge = selectedJudge {
