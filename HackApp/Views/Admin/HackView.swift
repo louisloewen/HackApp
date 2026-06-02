@@ -157,25 +157,34 @@ struct HackView: View {
             if !teams.isEmpty {
                 ForEach(teams, id: \.firestoreId) { equipo in
                     let equipoCalificado = teamHasEvaluations[equipo.firestoreId] ?? false
+                    let isDisabled = equipoCalificado || equipo.noShow
                     HStack {
-                        Text(equipo.nombre)
-                            .font(.body)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(equipo.nombre)
+                                .font(.body)
+                                .strikethrough(equipo.noShow)
+                            if equipo.noShow {
+                                Text("No se presentó")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
                         Spacer()
                         Button(action: {
-                            if !equipoCalificado { alertType = .confirmNoShow(equipo: equipo) }
+                            if !isDisabled { alertType = .confirmNoShow(equipo: equipo) }
                         }) {
                             Text("No se presentó")
                                 .font(.body)
-                                .foregroundColor(equipoCalificado ? .gray : .white)
+                                .foregroundColor(isDisabled ? .gray : .white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
-                                .background(equipoCalificado ? Color.gray : Color.red)
+                                .background(isDisabled ? Color.gray : Color.red)
                                 .cornerRadius(10)
                                 .shadow(radius: 5)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .padding(.leading)
-                        .disabled(equipoCalificado)
+                        .disabled(isDisabled)
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 15)
@@ -285,7 +294,7 @@ struct HackView: View {
     }
 
     private func saveChanges() {
-        if fechaStart >= fechaEnd {
+        if fechaStart >= fechaEnd || Calendar.current.isDate(fechaStart, inSameDayAs: fechaEnd) {
             alertType = .invalidDate
             return
         }
@@ -332,7 +341,10 @@ struct HackView: View {
 
     private func markNoShowForTeam(equipo: Equipo) {
         viewModel2.markNoShow(hackId: hack.id, teamId: equipo.firestoreId) { result in
-            if case .failure(let error) = result {
+            switch result {
+            case .success:
+                DispatchQueue.main.async { fetchTeams() }
+            case .failure(let error):
                 print("Error al marcar no-presentación: \(error)")
             }
         }
@@ -359,7 +371,7 @@ struct HackView: View {
             )
         case .invalidDate:
             return Alert(title: Text("Fecha Invalida"),
-                         message: Text("La fecha de inicio no puede ser menor a la fecha de fin."),
+                         message: Text("La fecha de inicio no puede ser igual o posterior a la fecha de fin. Verifica que las fechas sean diferentes."),
                          dismissButton: .default(Text("Aceptar")))
         case .editHack:
             return Alert(title: Text("Se ha editado"),

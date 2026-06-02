@@ -7,6 +7,7 @@ struct GradeView: View {
     let judgeId: String
     let nombreJuez: String
     let isActive: Bool
+    let isStarted: Bool
 
     @State private var rubros: [Rubro] = []
     @State private var scores: [String: Double] = [:]
@@ -14,13 +15,26 @@ struct GradeView: View {
     @State private var judgeNotes: String = ""
     @State private var alreadyRated = false
     @State private var showConfirmationAlert = false
+    @State private var isReGrading = false
+    @State private var showReGradeAlert = false
+    @State private var showReGradeConfirm = false
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel = HacksViewModel()
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                if !isActive {
+                if !isStarted {
+                    Text("El hackathon aún no ha iniciado. No se puede calificar.")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.orange.opacity(0.8))
+                        .cornerRadius(16)
+                        .shadow(radius: 10)
+                        .padding(.horizontal)
+                } else if !isActive {
                     Text("El hackathon ha cerrado. No se puede calificar.")
                         .font(.title2)
                         .fontWeight(.semibold)
@@ -42,8 +56,14 @@ struct GradeView: View {
                         .foregroundColor(.gray)
                         .padding(.bottom, 12)
 
-                    if alreadyRated {
+                    if alreadyRated && !isReGrading {
                         alreadyRatedSection
+                        if isActive {
+                            reGradeButton
+                        }
+                    } else if alreadyRated && isReGrading {
+                        gradingSection
+                        reGradeConfirmButton
                     } else {
                         gradingSection
                         confirmButton
@@ -170,7 +190,7 @@ struct GradeView: View {
                 .shadow(radius: 5)
             }
         }
-        .padding(.bottom, 24)
+        .padding(.bottom, 12)
     }
 
     private var confirmButton: some View {
@@ -184,13 +204,63 @@ struct GradeView: View {
                 .cornerRadius(16)
                 .shadow(radius: 5)
         }
-        .padding(.top, 24)
+        .padding(.top, 12)
         .alert(isPresented: $showConfirmationAlert) {
             Alert(
                 title: Text("Confirmación"),
                 message: Text("¿Estás seguro de que quieres calificar? Después de esto no podrás modificar tu calificación."),
                 primaryButton: .destructive(Text("Confirmar")) { submitCalificaciones() },
                 secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private var reGradeButton: some View {
+        Button(action: { showReGradeAlert = true }) {
+            HStack {
+                Image(systemName: "pencil.circle.fill")
+                Text("Modificar Calificación")
+            }
+            .font(.headline)
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.orange)
+            .foregroundColor(.white)
+            .cornerRadius(16)
+            .shadow(radius: 5)
+        }
+        .padding(.horizontal)
+        .alert(isPresented: $showReGradeAlert) {
+            Alert(
+                title: Text("Modificar Calificación"),
+                message: Text("¿Estás seguro de que quieres modificar tu calificación para \(team.nombre)?"),
+                primaryButton: .destructive(Text("Sí, modificar")) {
+                    if let existing = existingScores { scores = existing }
+                    isReGrading = true
+                },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private var reGradeConfirmButton: some View {
+        Button(action: { showReGradeConfirm = true }) {
+            Text("Guardar Nueva Calificación")
+                .font(.headline)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(LinearGradient(gradient: Gradient(colors: [Color.orange, Color.orange.opacity(0.7)]), startPoint: .top, endPoint: .bottom))
+                .foregroundColor(.white)
+                .cornerRadius(16)
+                .shadow(radius: 5)
+        }
+        .padding(.top, 12)
+        .alert(isPresented: $showReGradeConfirm) {
+            Alert(
+                title: Text("⚠️ Confirmación Final"),
+                message: Text("¿Estás seguro seguro? Esta acción reemplazará tu calificación anterior y no se puede deshacer."),
+                primaryButton: .destructive(Text("Confirmar")) { submitCalificaciones() },
+                secondaryButton: .cancel(Text("Cancelar")) { isReGrading = false }
             )
         }
     }
@@ -267,6 +337,7 @@ struct GradeView: View {
         team: Equipo(firestoreId: "teamId", nombre: "Equipo 1"),
         judgeId: "judgeId",
         nombreJuez: "Juez 1",
-        isActive: true
+        isActive: true,
+        isStarted: true
     )
 }

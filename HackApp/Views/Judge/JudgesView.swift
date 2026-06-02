@@ -10,6 +10,7 @@ struct JudgesView: View {
     @State private var hasSearched = false
     @State private var hackNombre: String = ""
     @State private var hackIsActive: Bool = false
+    @State private var hackIsStarted: Bool = false
     @ObservedObject var viewModel = HacksViewModel()
 
     var body: some View {
@@ -55,7 +56,8 @@ struct JudgesView: View {
                                 judgeId: judge.firestoreId,
                                 selectedJudge: judge.nombre,
                                 nombreHack: hackNombre,
-                                isActive: hackIsActive
+                                isActive: hackIsActive,
+                                isStarted: hackIsStarted
                             )
                         }
                     }) {
@@ -80,7 +82,6 @@ struct JudgesView: View {
                     searchButton("Buscar Jueces")
                 }
 
-                Spacer()
             }
         }
     }
@@ -113,6 +114,7 @@ struct JudgesView: View {
                 hackId = hack.id
                 hackNombre = hack.nombre
                 hackIsActive = hack.estaActivo
+                hackIsStarted = hack.estaIniciado
                 hackMaxScore = hack.valorRubro
                 fetchJudges(hackId: hack.id)
             case .failure:

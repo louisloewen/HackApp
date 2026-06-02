@@ -112,6 +112,12 @@ struct AddHackForm: View {
                 TextField("Descripción del hack", text: $formData.descripcion)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Duración del pitch (minutos)").font(.subheadline).foregroundColor(.secondary)
+                TextField("Ej: 5", text: $formData.tiempoPitch)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .keyboardType(.numberPad)
+            }
         }
         .padding(.horizontal)
     }
@@ -127,14 +133,8 @@ struct AddHackForm: View {
     private var rubrosContent: some View {
         VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Duración del pitch (minutos)").font(.subheadline).foregroundColor(.secondary)
-                TextField("Valor máximo de los rubros", text: $formData.tiempoPitch)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.numberPad)
-            }
-            VStack(alignment: .leading, spacing: 4) {
                 Text("Valor de la calificación máxima").font(.subheadline).foregroundColor(.secondary)
-                TextField("Valor máximo de los rubros", text: $formData.valorRubro)
+                TextField("Valor máximo de los rubros (Ej: 1-100)", text: $formData.valorRubro)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
             }
@@ -277,6 +277,12 @@ struct AddHackForm: View {
 
         if formData.date >= formData.dateEnd {
             alertMessage = "La fecha de inicio no puede ser posterior a la fecha de fin."
+            showingAlert = true
+            return
+        }
+
+        if Calendar.current.isDate(formData.date, inSameDayAs: formData.dateEnd) {
+            alertMessage = "⚠️ La fecha de inicio y la fecha de fin son el mismo día. Por favor, verifica las fechas."
             showingAlert = true
             return
         }

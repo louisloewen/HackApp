@@ -163,7 +163,8 @@ class HacksViewModel: ObservableObject {
             let teams = (snapshot?.documents ?? []).compactMap { doc -> Equipo? in
                 guard let name = doc.data()["name"] as? String else { return nil }
                 let order = doc.data()["order"] as? Int ?? 0
-                return Equipo(firestoreId: doc.documentID, nombre: name, order: order)
+                let noShow = doc.data()["noShow"] as? Bool ?? false
+                return Equipo(firestoreId: doc.documentID, nombre: name, order: order, noShow: noShow)
             }
             completion(.success(teams.sorted { $0.order < $1.order }))
         }
@@ -383,8 +384,13 @@ class HacksViewModel: ObservableObject {
                             ], forDocument: evalRef)
                         }
                         batch.commit { error in
-                            if let error = error { completion(.failure(error)) }
-                            else { completion(.success(())) }
+                            if let error = error { completion(.failure(error)); return }
+                            self.db.collection("hackathons").document(hackId)
+                                .collection("teams").document(teamId)
+                                .updateData(["noShow": true]) { error in
+                                    if let error = error { completion(.failure(error)) }
+                                    else { completion(.success(())) }
+                                }
                         }
                     }
                 }

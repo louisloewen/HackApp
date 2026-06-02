@@ -42,7 +42,8 @@ struct ResultsView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack {
                         if let criterio = selectedCriterio, let calificaciones = calificacionesPorCriterio[criterio] {
-                            Chart(calificaciones.keys.sorted(), id: \.self) { equipo in
+                            let teamNames = Set(teams.map { $0.nombre })
+                            Chart(calificaciones.keys.filter { teamNames.isEmpty || teamNames.contains($0) }.sorted(), id: \.self) { equipo in
                                 BarMark(
                                     x: .value("Puntuación", calificaciones[equipo] ?? 0.0),
                                     y: .value("Equipo", equipo)
@@ -64,7 +65,8 @@ struct ResultsView: View {
                             .cornerRadius(12)
                             .shadow(color: Color.black.opacity(0.1), radius: 8)
                         } else {
-                            Chart(topTeams, id: \.team) { team in
+                            let teamNames = Set(teams.map { $0.nombre })
+                            Chart(topTeams.filter { teamNames.isEmpty || teamNames.contains($0.team) }, id: \.team) { team in
                                 BarMark(
                                     x: .value("Puntuación", team.score),
                                     y: .value("Equipo", team.team)
@@ -178,7 +180,7 @@ struct ResultsView: View {
     private func fetchScores() {
         viewModel.getTeams(hackId: hack.id) { result in
             if case .success(let fetchedTeams) = result {
-                DispatchQueue.main.async { teams = fetchedTeams }
+                DispatchQueue.main.async { teams = fetchedTeams.filter { !$0.noShow } }
             }
         }
         viewModel.calculateAllScores(hackId: hack.id) { result in
@@ -214,7 +216,9 @@ struct ResultsView: View {
     }
 
     private func getRankedTeams() -> [(team: String, score: Double, rank: Int)] {
-        let teamsToRank = selectedCriterio != nil ? topTeamsPorCriterio : topTeams
+        let teamNames = Set(teams.map { $0.nombre })
+        let teamsToRank = (selectedCriterio != nil ? topTeamsPorCriterio : topTeams)
+            .filter { teamNames.isEmpty || teamNames.contains($0.team) }
         return teamsToRank.enumerated().map { (index, team) in
             (team: team.team, score: team.score, rank: index + 1)
         }

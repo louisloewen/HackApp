@@ -66,7 +66,13 @@ hackathons/{hackathonId}
 - Final scores were calculated and written back to Firestore only when an admin opened `HackView` — results could be outdated
 - **Fix:** Scores are calculated on-demand client-side when `ResultsView` opens, reading directly from evaluation subcollections
 
-### 6. No Cascading Deletes
+### 6. Slider Default Value Not Saved
+- `initializeCalificaciones()` and `fetchRubros()` were both called in `.onAppear`, but since `fetchRubros` is async, `rubros` was still empty when initialization ran — so no default values were ever written to the scores dictionary
+- The slider displayed `1.0` via a `?? 1.0` fallback, making it look correct on screen, but the value was never actually stored
+- If a judge didn't move a slider, that criterion was simply missing from the submitted data, contributing nothing to the final score
+- **Fix:** Default `1.0` values are now written inside the `fetchRubros` callback, after rubrics actually load. Every criterion gets a real value in the `scores` dict before the judge interacts with anything
+
+### 7. No Cascading Deletes
 - Deleting a hackathon document left all subcollection data orphaned in Firestore
 - **Fix:** `deleteHack()` now recursively deletes all subcollection documents before deleting the parent document
 

@@ -5,4 +5,5 @@ struct Equipo: Identifiable, Equatable {
     var firestoreId: String = ""
     var nombre: String
     var order: Int = 0
+    var noShow: Bool = false
 }
