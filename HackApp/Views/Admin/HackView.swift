@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AlertType: Identifiable {
-    case closeHack, invalidDate, sameDateWarning, editHack, errorProcess, closeSucess, startSucess, confirmNoShow(equipo: Equipo), passwordError
+    case closeHack, invalidDate, sameDateWarning, editHack, errorProcess, closeSucess, startSucess, confirmNoShow(equipo: Equipo), passwordError, rubricWeightExceeded
 
     var id: Int {
         switch self {
@@ -14,6 +14,7 @@ enum AlertType: Identifiable {
         case .startSucess: return 6
         case .confirmNoShow: return 7
         case .passwordError: return 8
+        case .rubricWeightExceeded: return 10
         }
     }
 }
@@ -31,8 +32,18 @@ struct HackView: View {
     @State private var fechaEnd: Date
     @State private var teams: [Equipo] = []
     @State private var jueces: [Juez] = []
-    @State private var rubros: [String: Double] = [:]
+    @State private var rubros: [Rubro] = []
     @State private var teamHasEvaluations: [String: Bool] = [:]
+    @State private var showingAddEquipoPopover = false
+    @State private var equipoNombre: String = ""
+    @State private var equipoAEditar: Equipo? = nil
+    @State private var showingAddJuezPopover = false
+    @State private var juezNombre: String = ""
+    @State private var juezAEditar: Juez? = nil
+    @State private var showingAddRubroPopover = false
+    @State private var rubroNombre: String = ""
+    @State private var rubroValor: String = ""
+    @State private var rubroAEditar: Rubro? = nil
     @State private var alertType: AlertType? = nil
     @State private var showEquipos = false
     @State private var showJueces = false
@@ -155,6 +166,32 @@ struct HackView: View {
 
     private var equiposView: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !hack.estaIniciado {
+                Button {
+                    equipoAEditar = nil
+                    equipoNombre = ""
+                    showingAddEquipoPopover = true
+                } label: {
+                    Label("Añadir equipo", systemImage: "plus")
+                        .foregroundColor(.blue)
+                }
+                .popover(isPresented: $showingAddEquipoPopover) {
+                    AddEquipoPopoverView(
+                        equipoNombre: $equipoNombre,
+                        onSave: saveEquipo,
+                        onCancel: {
+                            equipoNombre = ""
+                            equipoAEditar = nil
+                            showingAddEquipoPopover = false
+                        }
+                    )
+                    .onDisappear {
+                        equipoNombre = ""
+                        equipoAEditar = nil
+                    }
+                }
+            }
+
             if !teams.isEmpty {
                 ForEach(teams, id: \.firestoreId) { equipo in
                     let equipoCalificado = teamHasEvaluations[equipo.firestoreId] ?? false
@@ -171,21 +208,45 @@ struct HackView: View {
                             }
                         }
                         Spacer()
-                        Button(action: {
-                            if !isDisabled { alertType = .confirmNoShow(equipo: equipo) }
-                        }) {
-                            Text("No se presentó")
-                                .font(.body)
-                                .foregroundColor(isDisabled ? .gray : .white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(isDisabled ? Color.gray : Color.red)
-                                .cornerRadius(10)
-                                .shadow(radius: 5)
+                        if hack.estaIniciado {
+                            Button(action: {
+                                if !isDisabled { alertType = .confirmNoShow(equipo: equipo) }
+                            }) {
+                                Text("No se presentó")
+                                    .font(.body)
+                                    .foregroundColor(isDisabled ? .gray : .white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(isDisabled ? Color.gray : Color.red)
+                                    .cornerRadius(10)
+                                    .shadow(radius: 5)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(.leading)
+                            .disabled(isDisabled)
+                        } else {
+                            Menu {
+                                Button(action: {
+                                    equipoAEditar = equipo
+                                    equipoNombre = equipo.nombre
+                                    showingAddEquipoPopover = true
+                                }) {
+                                    Label("Editar", systemImage: "pencil.circle.fill")
+                                        .foregroundColor(.yellow)
+                                }
+                                Button(action: {
+                                    deleteTeamFromFirestore(equipo)
+                                }) {
+                                    Label("Eliminar", systemImage: "trash.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                                .disabled(equipoCalificado)
+                            } label: {
+                                Image(systemName: "ellipsis.circle.fill")
+                                    .foregroundColor(.blue)
+                                    .imageScale(.large)
+                            }
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.leading)
-                        .disabled(isDisabled)
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 15)
@@ -206,11 +267,59 @@ struct HackView: View {
 
     private var juecesView: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !hack.estaIniciado {
+                Button {
+                    juezAEditar = nil
+                    juezNombre = ""
+                    showingAddJuezPopover = true
+                } label: {
+                    Label("Añadir juez", systemImage: "plus")
+                        .foregroundColor(.blue)
+                }
+                .popover(isPresented: $showingAddJuezPopover) {
+                    AddJuezPopoverView(
+                        juezNombre: $juezNombre,
+                        onSave: saveJuez,
+                        onCancel: {
+                            juezNombre = ""
+                            juezAEditar = nil
+                            showingAddJuezPopover = false
+                        }
+                    )
+                    .onDisappear {
+                        juezNombre = ""
+                        juezAEditar = nil
+                    }
+                }
+            }
+
             if !jueces.isEmpty {
                 ForEach(jueces, id: \.firestoreId) { juez in
                     HStack {
                         Text(juez.nombre).font(.body)
                         Spacer()
+                        if !hack.estaIniciado {
+                            Menu {
+                                Button(action: {
+                                    juezAEditar = juez
+                                    juezNombre = juez.nombre
+                                    showingAddJuezPopover = true
+                                }) {
+                                    Label("Editar", systemImage: "pencil.circle.fill")
+                                        .foregroundColor(.yellow)
+                                }
+                                Button(action: {
+                                    deleteJudgeFromFirestore(juez)
+                                }) {
+                                    Label("Eliminar", systemImage: "trash.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle.fill")
+                                    .foregroundColor(.blue)
+                                    .imageScale(.large)
+                            }
+                        }
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 15)
@@ -230,20 +339,71 @@ struct HackView: View {
 
     private var rubrosView: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if !rubros.isEmpty {
-                ForEach(rubros.keys.sorted(), id: \.self) { key in
-                    if let value = rubros[key] {
-                        HStack {
-                            Text(key).font(.body)
-                            Spacer()
-                            Text("\(value, specifier: "%.2f")%").font(.body)
+            if !hack.estaIniciado {
+                Button {
+                    rubroAEditar = nil
+                    rubroNombre = ""
+                    rubroValor = ""
+                    showingAddRubroPopover = true
+                } label: {
+                    Label("Añadir criterio", systemImage: "plus")
+                        .foregroundColor(.blue)
+                }
+                .popover(isPresented: $showingAddRubroPopover) {
+                    AddRubroPopoverView(
+                        rubroNombre: $rubroNombre,
+                        rubroValor: $rubroValor,
+                        onSave: saveRubric,
+                        onCancel: {
+                            rubroNombre = ""
+                            rubroValor = ""
+                            rubroAEditar = nil
+                            showingAddRubroPopover = false
                         }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 15)
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .padding(.bottom, 8)
+                    )
+                    .onDisappear {
+                        rubroNombre = ""
+                        rubroValor = ""
+                        rubroAEditar = nil
                     }
+                }
+            }
+
+            if !rubros.isEmpty {
+                ForEach(rubros, id: \.firestoreId) { rubro in
+                    HStack {
+                        Text(rubro.nombre).font(.body)
+                        Spacer()
+                        Text("\(rubro.valor, specifier: "%.2f")%").font(.body)
+                        if !hack.estaIniciado {
+                            Menu {
+                                Button(action: {
+                                    rubroAEditar = rubro
+                                    rubroNombre = rubro.nombre
+                                    rubroValor = "\(rubro.valor)"
+                                    showingAddRubroPopover = true
+                                }) {
+                                    Label("Editar", systemImage: "pencil.circle.fill")
+                                        .foregroundColor(.yellow)
+                                }
+                                Button(action: {
+                                    deleteRubricFromFirestore(rubro)
+                                }) {
+                                    Label("Eliminar", systemImage: "trash.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle.fill")
+                                    .foregroundColor(.blue)
+                                    .imageScale(.large)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 15)
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .padding(.bottom, 8)
                 }
             } else {
                 Text("No hay rubros definidos.")
@@ -279,9 +439,9 @@ struct HackView: View {
     }
 
     private func fetchRubros() {
-        viewModel2.fetchRubros(hackId: hack.id) { result in
-            if case .success(let rubrosData) = result {
-                DispatchQueue.main.async { rubros = rubrosData }
+        viewModel2.getRubrics(hackId: hack.id) { result in
+            if case .success(let fetchedRubros) = result {
+                DispatchQueue.main.async { rubros = fetchedRubros }
             }
         }
     }
@@ -359,6 +519,107 @@ struct HackView: View {
         }
     }
 
+    // MARK: - Popover Save Actions
+
+    private func saveEquipo() {
+        guard !equipoNombre.isEmpty else { return }
+        if let editTarget = equipoAEditar {
+            updateTeamInFirestore(editTarget, newName: equipoNombre)
+        } else {
+            addTeamToFirestore(name: equipoNombre)
+        }
+        equipoNombre = ""
+        equipoAEditar = nil
+        showingAddEquipoPopover = false
+    }
+
+    private func saveJuez() {
+        guard !juezNombre.isEmpty else { return }
+        if let editTarget = juezAEditar {
+            updateJudgeInFirestore(editTarget, newName: juezNombre)
+        } else {
+            addJudgeToFirestore(name: juezNombre)
+        }
+        juezNombre = ""
+        juezAEditar = nil
+        showingAddJuezPopover = false
+    }
+
+    private func saveRubric() {
+        guard !rubroNombre.isEmpty, let weight = Double(rubroValor) else { return }
+        let currentTotal = rubros.reduce(0) { $0 + $1.valor }
+        let editingValue = rubroAEditar?.valor ?? 0
+        guard currentTotal - editingValue + weight <= 100 else {
+            alertType = .rubricWeightExceeded
+            return
+        }
+        if let editTarget = rubroAEditar {
+            updateRubricInFirestore(editTarget, newName: rubroNombre, newWeight: weight)
+        } else {
+            addRubricToFirestore(name: rubroNombre, weight: weight)
+        }
+        rubroNombre = ""
+        rubroValor = ""
+        rubroAEditar = nil
+        showingAddRubroPopover = false
+    }
+
+    // MARK: - Firestore CRUD Helpers
+
+    private func addTeamToFirestore(name: String) {
+        viewModel2.addTeam(hackId: hack.id, name: name, order: teams.count) { result in
+            if case .success = result { fetchTeams() }
+        }
+    }
+
+    private func updateTeamInFirestore(_ team: Equipo, newName: String) {
+        viewModel2.updateTeam(hackId: hack.id, teamId: team.firestoreId, name: newName) { result in
+            if case .success = result { fetchTeams() }
+        }
+    }
+
+    private func deleteTeamFromFirestore(_ team: Equipo) {
+        viewModel2.deleteTeam(hackId: hack.id, teamId: team.firestoreId) { result in
+            if case .success = result { fetchTeams() }
+        }
+    }
+
+    private func addJudgeToFirestore(name: String) {
+        viewModel2.addJudge(hackId: hack.id, name: name) { result in
+            if case .success = result { fetchJudges() }
+        }
+    }
+
+    private func updateJudgeInFirestore(_ juez: Juez, newName: String) {
+        viewModel2.updateJudge(hackId: hack.id, judgeId: juez.firestoreId, name: newName) { result in
+            if case .success = result { fetchJudges() }
+        }
+    }
+
+    private func deleteJudgeFromFirestore(_ juez: Juez) {
+        viewModel2.deleteJudge(hackId: hack.id, judgeId: juez.firestoreId) { result in
+            if case .success = result { fetchJudges() }
+        }
+    }
+
+    private func addRubricToFirestore(name: String, weight: Double) {
+        viewModel2.addRubricCriterion(hackId: hack.id, name: name, weight: weight) { result in
+            if case .success = result { fetchRubros() }
+        }
+    }
+
+    private func updateRubricInFirestore(_ rubro: Rubro, newName: String, newWeight: Double) {
+        viewModel2.updateRubricCriterion(hackId: hack.id, criterionId: rubro.firestoreId, name: newName, weight: newWeight) { result in
+            if case .success = result { fetchRubros() }
+        }
+    }
+
+    private func deleteRubricFromFirestore(_ rubro: Rubro) {
+        viewModel2.deleteRubricCriterion(hackId: hack.id, criterionId: rubro.firestoreId) { result in
+            if case .success = result { fetchRubros() }
+        }
+    }
+
     private func checkForChanges() {
         hasChanges = (nombre != hack.nombre ||
                       descripcion != hack.descripcion ||
@@ -384,7 +645,7 @@ struct HackView: View {
                          dismissButton: .default(Text("Aceptar")))
         case .sameDateWarning:
             return Alert(
-                title: Text("⚠️ Aviso sobre fechas"),
+                title: Text("Aviso sobre fechas"),
                 message: Text("La fecha de inicio y la fecha de fin son el mismo día. ¿Deseas continuar de todos modos?"),
                 primaryButton: .default(Text("Continuar")) { proceedWithSaveChanges() },
                 secondaryButton: .cancel(Text("Cancelar"))
@@ -415,6 +676,10 @@ struct HackView: View {
         case .passwordError:
             return Alert(title: Text("Error"),
                          message: Text("Ya existe esa clave"),
+                         dismissButton: .default(Text("Aceptar")))
+        case .rubricWeightExceeded:
+            return Alert(title: Text("Error en rúbrica"),
+                         message: Text("El total de los criterios no puede exceder 100%."),
                          dismissButton: .default(Text("Aceptar")))
         }
     }

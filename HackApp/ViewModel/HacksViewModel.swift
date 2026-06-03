@@ -205,6 +205,74 @@ class HacksViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Pre-Start Editing
+
+    func addTeam(hackId: String, name: String, order: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("teams").addDocument(data: [
+            "name": name, "order": order, "noShow": false
+        ]) { error in
+            if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+        }
+    }
+
+    func updateTeam(hackId: String, teamId: String, name: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("teams").document(teamId)
+            .updateData(["name": name]) { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
+    func deleteTeam(hackId: String, teamId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("teams").document(teamId)
+            .delete { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
+    func addJudge(hackId: String, name: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("judges").addDocument(data: [
+            "name": name
+        ]) { error in
+            if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+        }
+    }
+
+    func updateJudge(hackId: String, judgeId: String, name: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("judges").document(judgeId)
+            .updateData(["name": name]) { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
+    func deleteJudge(hackId: String, judgeId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("judges").document(judgeId)
+            .delete { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
+    func addRubricCriterion(hackId: String, name: String, weight: Double, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("rubricCriteria").addDocument(data: [
+            "name": name, "weight": weight
+        ]) { error in
+            if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+        }
+    }
+
+    func updateRubricCriterion(hackId: String, criterionId: String, name: String, weight: Double, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("rubricCriteria").document(criterionId)
+            .updateData(["name": name, "weight": weight]) { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
+    func deleteRubricCriterion(hackId: String, criterionId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("hackathons").document(hackId).collection("rubricCriteria").document(criterionId)
+            .delete { error in
+                if let error = error { completion(.failure(error)) } else { completion(.success(())) }
+            }
+    }
+
     // MARK: - Evaluations
 
     func saveEvaluation(
