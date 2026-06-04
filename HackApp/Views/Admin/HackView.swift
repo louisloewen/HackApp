@@ -455,11 +455,15 @@ struct HackView: View {
     }
 
     private func saveChanges() {
-        if fechaStart >= fechaEnd {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: fechaStart)
+        let endDay = calendar.startOfDay(for: fechaEnd)
+
+        if startDay > endDay {
             alertType = .invalidDate
             return
         }
-        if Calendar.current.isDate(fechaStart, inSameDayAs: fechaEnd) {
+        if startDay == endDay {
             alertType = .sameDateWarning
             return
         }

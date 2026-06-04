@@ -282,13 +282,17 @@ struct AddHackForm: View {
             return
         }
 
-        if formData.date >= formData.dateEnd {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: formData.date)
+        let endDay = calendar.startOfDay(for: formData.dateEnd)
+
+        if startDay > endDay {
             alertMessage = "La fecha de inicio no puede ser posterior a la fecha de fin."
             showingAlert = true
             return
         }
 
-        if Calendar.current.isDate(formData.date, inSameDayAs: formData.dateEnd) {
+        if startDay == endDay {
             showSameDateWarning = true
             return
         }
