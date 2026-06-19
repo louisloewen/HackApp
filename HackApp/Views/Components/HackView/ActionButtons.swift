@@ -18,7 +18,7 @@ struct ActionButtons: View {
             navigationLinkButton
             closeAndStartButtons
         }
-        .padding(.top, 20)
+        .padding(.top, 8)
     }
     
     private var navigationLinkButton: some View {
@@ -28,10 +28,10 @@ struct ActionButtons: View {
                 .fontWeight(.bold)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(Color.blue)
+                .background(hack.estaIniciado ? Color.blue : Color.gray)
                 .foregroundColor(.white)
                 .cornerRadius(10)
-                .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
+                .shadow(color: hack.estaIniciado ? Color.blue.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
         }
         .disabled(!hack.estaIniciado)
         .padding(.horizontal)
@@ -44,10 +44,10 @@ struct ActionButtons: View {
                     .font(.headline)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.red)
+                    .background(hack.estaIniciado && hack.estaActivo ? Color.red : Color.gray)
                     .foregroundColor(.white)
                     .cornerRadius(10)
-                    .shadow(color: Color.red.opacity(0.3), radius: 2, x: 0, y: 2)
+                    .shadow(color: hack.estaIniciado && hack.estaActivo ? Color.red.opacity(0.3) : Color.clear, radius: 2, x: 0, y: 2)
             }
             .disabled(!hack.estaActivo)
             .disabled(!hack.estaIniciado)

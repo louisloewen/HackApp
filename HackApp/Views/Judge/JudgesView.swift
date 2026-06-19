@@ -10,6 +10,7 @@ struct JudgesView: View {
     @State private var hasSearched = false
     @State private var hackNombre: String = ""
     @State private var hackIsActive: Bool = false
+    @State private var hackIsStarted: Bool = false
     @ObservedObject var viewModel = HacksViewModel()
 
     var body: some View {
@@ -34,17 +35,25 @@ struct JudgesView: View {
                         .font(.title)
                         .padding()
 
-                    List(availableJudges.sorted(by: { $0.nombre < $1.nombre }), id: \.firestoreId) { judge in
-                        Button(action: { selectedJudge = judge }) {
-                            Text(judge.nombre)
-                                .font(.title2)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(selectedJudge?.firestoreId == judge.firestoreId
-                                    ? Color.blue.opacity(0.2) : Color.clear)
-                                .cornerRadius(8)
+                    ScrollView {
+                        VStack(spacing: 4) {
+                            ForEach(availableJudges.sorted(by: { $0.nombre < $1.nombre }), id: \.firestoreId) { judge in
+                                Button(action: { selectedJudge = judge }) {
+                                    Text(judge.nombre)
+                                        .font(.title2)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(selectedJudge?.firestoreId == judge.firestoreId
+                                            ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal)
+                            }
                         }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxHeight: 400)
 
                     NavigationLink(destination: Group {
                         if let judge = selectedJudge {
@@ -55,7 +64,8 @@ struct JudgesView: View {
                                 judgeId: judge.firestoreId,
                                 selectedJudge: judge.nombre,
                                 nombreHack: hackNombre,
-                                isActive: hackIsActive
+                                isActive: hackIsActive,
+                                isStarted: hackIsStarted
                             )
                         }
                     }) {
@@ -80,7 +90,6 @@ struct JudgesView: View {
                     searchButton("Buscar Jueces")
                 }
 
-                Spacer()
             }
         }
     }
@@ -113,6 +122,7 @@ struct JudgesView: View {
                 hackId = hack.id
                 hackNombre = hack.nombre
                 hackIsActive = hack.estaActivo
+                hackIsStarted = hack.estaIniciado
                 hackMaxScore = hack.valorRubro
                 fetchJudges(hackId: hack.id)
             case .failure:

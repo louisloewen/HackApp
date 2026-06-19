@@ -6,6 +6,7 @@ struct AddHackForm: View {
     @ObservedObject var listaHacks: HacksViewModel
     @Binding var showingAlert: Bool
     @State private var alertMessage: String = ""
+    @State private var showSameDateWarning = false
     @State private var showingAddRubroPopover = false
     @State private var showingAddEquipoPopover = false
     @State private var showingAddJuezPopover = false
@@ -65,6 +66,12 @@ struct AddHackForm: View {
         .alert(isPresented: $showingAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
+        .alert("⚠️ Aviso sobre fechas", isPresented: $showSameDateWarning) {
+            Button("Continuar de todos modos") { proceedWithSave() }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("La fecha de inicio y la fecha de fin son el mismo día. ¿Deseas continuar de todos modos?")
+        }
     }
 
     private func collapsibleSection<Content: View>(
@@ -112,6 +119,12 @@ struct AddHackForm: View {
                 TextField("Descripción del hack", text: $formData.descripcion)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Duración del pitch (minutos)").font(.subheadline).foregroundColor(.secondary)
+                TextField("Ej: 5", text: $formData.tiempoPitch)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .keyboardType(.numberPad)
+            }
         }
         .padding(.horizontal)
     }
@@ -127,14 +140,8 @@ struct AddHackForm: View {
     private var rubrosContent: some View {
         VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Duración del pitch (minutos)").font(.subheadline).foregroundColor(.secondary)
-                TextField("Valor máximo de los rubros", text: $formData.tiempoPitch)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .keyboardType(.numberPad)
-            }
-            VStack(alignment: .leading, spacing: 4) {
                 Text("Valor de la calificación máxima").font(.subheadline).foregroundColor(.secondary)
-                TextField("Valor máximo de los rubros", text: $formData.valorRubro)
+                TextField("Valor máximo de los rubros (Ej: 1-100)", text: $formData.valorRubro)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
             }
@@ -275,9 +282,18 @@ struct AddHackForm: View {
             return
         }
 
-        if formData.date >= formData.dateEnd {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: formData.date)
+        let endDay = calendar.startOfDay(for: formData.dateEnd)
+
+        if startDay > endDay {
             alertMessage = "La fecha de inicio no puede ser posterior a la fecha de fin."
             showingAlert = true
+            return
+        }
+
+        if startDay == endDay {
+            showSameDateWarning = true
             return
         }
 
@@ -342,6 +358,10 @@ struct AddHackForm: View {
             return
         }
 
+        proceedWithSave()
+    }
+
+    private func proceedWithSave() {
         listaHacks.checkIfKeyExists(formData.clave) { exists in
             if exists {
                 DispatchQueue.main.async {

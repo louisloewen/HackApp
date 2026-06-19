@@ -8,6 +8,7 @@ struct JudgeHomeView: View {
     let selectedJudge: String
     let nombreHack: String
     let isActive: Bool
+    let isStarted: Bool
 
     @State private var teams: [Equipo] = []
     @State private var evaluationStatus: [String: Bool] = [:]
@@ -24,9 +25,24 @@ struct JudgeHomeView: View {
                 Text("Equipos participantes")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-                    .padding(.bottom)
+                    .padding(.bottom, 4)
 
-                if teams.isEmpty {
+                if !isStarted {
+                    VStack(spacing: 16) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .font(.system(size: 50))
+                            .foregroundColor(.orange)
+                        Text("El hackathon aún no ha iniciado.")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                        Text("Por favor espera a que el administrador inicie el evento.")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else if teams.isEmpty {
                     Text("No hay equipos disponibles para evaluar.")
                         .font(.title3)
                         .foregroundColor(.gray)
@@ -64,12 +80,12 @@ struct JudgeHomeView: View {
                                 team: equipo,
                                 judgeId: judgeId,
                                 nombreJuez: selectedJudge,
-                                isActive: isActive
+                                isActive: isActive,
+                                isStarted: isStarted
                             )) { EmptyView() }
                                 .opacity(0)
-                                .disabled(isEvaluated)
                         )
-                        .opacity(isEvaluated ? 0.6 : 1.0)
+                        .opacity(isEvaluated ? 0.8 : 1.0)
                     }
                     .listStyle(PlainListStyle())
                 }
@@ -83,7 +99,7 @@ struct JudgeHomeView: View {
     private func fetchData() {
         viewModel.getTeams(hackId: hackId) { result in
             if case .success(let fetchedTeams) = result {
-                DispatchQueue.main.async { teams = fetchedTeams }
+                DispatchQueue.main.async { teams = fetchedTeams.filter { !$0.noShow } }
             }
         }
         viewModel.getEvaluationStatus(hackId: hackId, judgeId: judgeId) { result in
@@ -96,6 +112,6 @@ struct JudgeHomeView: View {
 
 struct JudgeHomeView_Previews: PreviewProvider {
     static var previews: some View {
-        JudgeHomeView(hackId: "example", hackClaveInput: "HACK24", hackMaxScore: 10, judgeId: "judge1", selectedJudge: "Juez1", nombreHack: "Ejemplo Hackathon", isActive: false)
+        JudgeHomeView(hackId: "example", hackClaveInput: "HACK24", hackMaxScore: 10, judgeId: "judge1", selectedJudge: "Juez1", nombreHack: "Ejemplo Hackathon", isActive: false, isStarted: false)
     }
 }
